@@ -1,0 +1,22 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: micro-echo
+  namespace: default
+spec:
+  hosts:
+  - micro-echo
+  http:
+  - route:
+    - destination:
+        host: micro-echo
+        port:
+          number: 8080
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: echo-destination
+  namespace: default
+spec:
+  host: micro-echo

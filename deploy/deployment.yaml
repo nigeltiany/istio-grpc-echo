@@ -1,0 +1,65 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: micro-echo
+  labels:
+    app: micro-echo
+  annotations:
+    getambassador.io/config: |
+      ---
+      apiVersion: ambassador/v0
+      kind:  Mapping
+      name:  micro_mapping
+      service: micro-echo:80
+      grpc: true
+      prefix: /EchoService.EchoService/
+      rewrite: /EchoService.EchoService/
+      precedence: 2
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    name: grpc-echo
+    targetPort: echo-srv
+  selector:
+    app: micro-echo
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: micro-echo
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: micro-echo
+        version: v1
+    spec:
+      containers:
+      - name: micro-echo
+        image: gcr.io/confab-cloud/micro-echo:latest
+        imagePullPolicy: Always
+        ports:
+        - name: echo-srv
+          containerPort: 8080
+  selector:
+    matchLabels:
+      app: micro-echo
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: echo-filter
+spec:
+  workloadLabels:
+    app: micro-echo
+  filters:
+  - listenerMatch:
+      portNumber: 8080
+      listenerType: SIDECAR_INBOUND #will match with the inbound listener for reviews:8080
+    filterName: envoy.grpc_web
+    filterType: HTTP
+    filterConfig: {}
+    insertPosition:
+      index: FIRST
